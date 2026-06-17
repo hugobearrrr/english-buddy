@@ -144,6 +144,7 @@
     }
     .input-bar textarea {
       flex: 1;
+      min-width: 0;
       border: 1.5px solid var(--border);
       border-radius: 14px;
       padding: 10px 14px;
@@ -157,6 +158,8 @@
       transition: border-color 0.2s;
       background: var(--bg);
       color: var(--text);
+      line-height: 1.5;
+      word-break: break-word;
     }
     .input-bar textarea:focus { border-color: var(--primary); }
     .send-btn {
@@ -327,6 +330,42 @@
       .sidebar { display: none; }
       .bubble { max-width: 86%; }
     }
+
+    /* ===== 历史记录 ===== */
+    .history-day {
+      margin-bottom: 16px;
+    }
+    .history-day-header {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--primary);
+      padding: 8px 12px;
+      background: var(--primary-light);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .history-day-header .day-count {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 400;
+    }
+    .history-item {
+      display: flex;
+      gap: 8px;
+      padding: 6px 12px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13.5px;
+    }
+    .history-item:last-child { border-bottom: none; }
+    .history-item .h-en { font-weight: 600; color: var(--text); flex-shrink: 0; }
+    .history-item .h-zh { color: var(--muted); }
+    .history-empty {
+      text-align: center; color: var(--muted);
+      padding: 30px; font-size: 14px;
+    }
   </style>
 </head>
 <body>
@@ -341,8 +380,9 @@
       </div>
     </div>
   <div class="header-actions">
+    <button class="btn-icon" onclick="openHistory()">📅 历史</button>
     <button class="btn-icon" onclick="openSettings()">⚙️ 设置</button>
-    <button class="btn-icon" onclick="sendNowReview()">📤 立即推送复习</button>
+    <button class="btn-icon" onclick="sendNowReview()">📤 推送</button>
   </div>
 </header>
 
@@ -372,7 +412,7 @@
       </div>
     </div>
     <div class="input-bar">
-      <textarea id="inputBox" placeholder="描述一个场景，问我怎么用英语说……（Enter 发送，Shift+Enter 换行）"
+      <textarea id="inputBox" placeholder="描述场景，问我英语怎么说…"
         rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
       <button class="send-btn" onclick="sendMessage()">
         <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
@@ -390,6 +430,7 @@
       <div class="empty-vocab">✨ 还没有收录内容<br>跟助手聊聊，英语单词和句子<br>会自动出现在这里～</div>
     </div>
     <div class="sidebar-footer">
+      <button class="clear-btn" onclick="openHistory()" style="margin-bottom:8px;">📅 历史记录</button>
       <button class="clear-btn" onclick="clearVocab()">🗑️ 清空今日清单</button>
     </div>
   </div>
@@ -411,7 +452,11 @@
     <label>🧠 模型名称</label>
     <input type="text" id="modelInput" placeholder="gpt-4o-mini" />
 
-    <label>📱 Server酱 SendKey（用于每晚微信推送）</label>
+    <label>⏰ 每日推送时间</label>
+    <input type="time" id="pushTimeInput" value="20:00" />
+    <p class="hint">每天到了这个时间，自动把当天学到的词汇推送到你的微信。</p>
+
+    <label>📱 Server酱 SendKey（用于微信推送）</label>
     <input type="text" id="ftqqKeyInput" placeholder="SCT..." />
     <p class="hint">还没有？<a href="https://sct.ftqq.com/" target="_blank">点这里免费申请</a>，用微信扫码登录即可获得。</p>
 
@@ -424,6 +469,18 @@
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
+
+<!-- 历史记录弹窗 -->
+<div class="overlay" id="historyOverlay" onclick="historyOverlayClick(event)">
+  <div class="modal" style="width:480px;">
+    <h3>📅 历史记录</h3>
+    <p class="modal-desc">按天查看所有学过的英语词汇和句子。</p>
+    <div id="historyContent" style="max-height:55vh; overflow-y:auto;"></div>
+    <div class="modal-btns">
+      <button class="btn-primary" onclick="closeHistory()">关闭</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // ==================== 系统提示词 ====================
@@ -492,6 +549,7 @@ function loadSettings() {
   document.getElementById('apiBaseInput').value = settings.apiBase || '';
   document.getElementById('modelInput').value   = settings.model   || '';
   document.getElementById('ftqqKeyInput').value = settings.ftqqKey || '';
+  document.getElementById('pushTimeInput').value = settings.pushTime || '20:00';
 }
 
 function saveSettings() {
@@ -499,6 +557,7 @@ function saveSettings() {
   settings.apiBase = document.getElementById('apiBaseInput').value.trim();
   settings.model   = document.getElementById('modelInput').value.trim() || 'gpt-4o-mini';
   settings.ftqqKey = document.getElementById('ftqqKeyInput').value.trim();
+  settings.pushTime = document.getElementById('pushTimeInput').value || '20:00';
   localStorage.setItem('engBuddySettings', JSON.stringify(settings));
   closeSettings();
   checkApiKey();
@@ -747,11 +806,12 @@ async function doPush() {
   }
 }
 
-// 每分钟检查一次，20:00 自动推送
+// 根据设置的时间定时推送
 function scheduleDailyPush() {
   setInterval(() => {
     const now = new Date();
-    if (now.getHours() === 20 && now.getMinutes() === 0) {
+    const [h, m] = (settings.pushTime || '20:00').split(':').map(Number);
+    if (now.getHours() === h && now.getMinutes() === m) {
       const key = 'lastPushDate';
       const today = todayKey();
       if (localStorage.getItem(key) !== today) {
@@ -760,6 +820,63 @@ function scheduleDailyPush() {
       }
     }
   }, 60000);
+}
+
+// ==================== 历史记录 ====================
+function openHistory() {
+  renderHistory();
+  document.getElementById('historyOverlay').classList.add('open');
+}
+function closeHistory() {
+  document.getElementById('historyOverlay').classList.remove('open');
+}
+function historyOverlayClick(e) {
+  if (e.target === document.getElementById('historyOverlay')) closeHistory();
+}
+
+function renderHistory() {
+  const container = document.getElementById('historyContent');
+  // 遍历 localStorage 找所有 engVocab_ 开头的 key
+  const allDays = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('engVocab_')) {
+      const dateStr = key.replace('engVocab_', '');
+      try {
+        const items = JSON.parse(localStorage.getItem(key) || '[]');
+        if (items.length > 0) allDays.push({ date: dateStr, items });
+      } catch(e) {}
+    }
+  }
+  // 按日期倒序（最新的在最上面）
+  allDays.sort((a, b) => b.date.localeCompare(a.date));
+
+  if (!allDays.length) {
+    container.innerHTML = '<div class="history-empty">还没有历史记录<br>跟助手聊聊，词汇会自动记录下来 📝</div>';
+    return;
+  }
+
+  container.innerHTML = allDays.map(day => {
+    const d = new Date(day.date);
+    const dateLabel = `${d.getMonth()+1}月${d.getDate()}日`;
+    const isToday = day.date === todayKey();
+    const dayTitle = isToday ? `${dateLabel}（今天）` : dateLabel;
+    const itemsHtml = day.items.map(item => `
+      <div class="history-item">
+        <span class="h-en">${esc(item.en)}</span>
+        <span class="h-zh">${esc(item.zh)}</span>
+      </div>
+    `).join('');
+    return `
+      <div class="history-day">
+        <div class="history-day-header">
+          <span>${dayTitle}</span>
+          <span class="day-count">共 ${day.items.length} 个</span>
+        </div>
+        ${itemsHtml}
+      </div>
+    `;
+  }).join('');
 }
 
 // ==================== 工具函数 ====================
