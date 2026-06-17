@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#6C63FF" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🐣%3C/text%3E%3C/svg%3E" />
+  <title>宝宝英语陪练助手 🐣</title>
+  <style>
+    :root {
+      --primary: #6C63FF;
+      --primary-light: #EEF0FF;
+      --accent: #FF7F7F;
+      --bg: #F8F9FE;
+      --card: #FFFFFF;
+      --text: #2D2D3A;
+      --muted: #9090A0;
+      --border: #E4E6F0;
+      --shadow: 0 4px 24px rgba(108,99,255,0.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ===== Header ===== */
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 0 20px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .header-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .header-text { min-width: 0; overflow: hidden; }
+    .header-logo { font-size: 26px; }
+    .header-title { font-size: 17px; font-weight: 700; color: var(--primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .header-sub { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .header-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .btn-icon {
+      border: 1.5px solid var(--border);
+      background: var(--card);
+      border-radius: 10px;
+      padding: 6px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--text);
+      transition: all 0.2s;
+    }
+    .btn-icon:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+
+    /* ===== API 提示横幅 ===== */
+    .api-banner {
+      background: #FFF8E7;
+      border-bottom: 1px solid #FFE082;
+      padding: 9px 20px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .api-banner a { color: var(--primary); text-decoration: underline; cursor: pointer; }
+
+    /* ===== 主体 ===== */
+    .main { display: flex; flex: 1; overflow: hidden; }
+
+    /* ===== 聊天区 ===== */
+    .chat-section { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .messages::-webkit-scrollbar { width: 4px; }
+    .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .msg-row { display: flex; align-items: flex-end; gap: 8px; }
+    .msg-row.user { flex-direction: row-reverse; }
+
+    .avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .avatar.ai { background: var(--primary-light); }
+    .avatar.user { background: #FFF0F0; }
+
+    .bubble {
+      max-width: 72%;
+      padding: 11px 15px;
+      border-radius: 18px;
+      font-size: 14.5px;
+      line-height: 1.7;
+      box-shadow: var(--shadow);
+    }
+    .bubble.ai {
+      background: var(--card);
+      border-bottom-left-radius: 4px;
+      border: 1px solid var(--border);
+    }
+    .bubble.user {
+      background: var(--primary);
+      border-bottom-right-radius: 4px;
+      color: #fff;
+    }
+
+    /* 词汇卡片 */
+    .phrase-card {
+      background: var(--primary-light);
+      border: 1.5px solid var(--primary);
+      border-radius: 10px;
+      padding: 9px 13px;
+      margin-top: 10px;
+      font-size: 13.5px;
+    }
+    .phrase-card .en { font-size: 15px; font-weight: 700; color: var(--primary); }
+    .phrase-card .zh { color: var(--muted); font-size: 13px; margin-top: 3px; }
+
+    /* 输入栏 */
+    .input-bar {
+      padding: 12px 16px;
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+    .input-bar textarea {
+      flex: 1;
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-family: inherit;
+      resize: none;
+      min-height: 44px;
+      max-height: 120px;
+      overflow-y: auto;
+      outline: none;
+      transition: border-color 0.2s;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .input-bar textarea:focus { border-color: var(--primary); }
+    .send-btn {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: var(--primary);
+      border: none;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .send-btn:hover { background: #5753d6; }
+    .send-btn:active { transform: scale(0.92); }
+    .send-btn svg { width: 20px; height: 20px; fill: #fff; }
+
+    /* ===== 侧边栏 ===== */
+    .sidebar {
+      width: 300px;
+      border-left: 1px solid var(--border);
+      background: var(--card);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .sidebar-header {
+      padding: 14px 16px 10px;
+      font-size: 14px;
+      font-weight: 700;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .sidebar-header .date-label { font-size: 12px; color: var(--muted); font-weight: 400; }
+    .vocab-count {
+      background: var(--primary);
+      color: #fff;
+      border-radius: 10px;
+      padding: 1px 7px;
+      font-size: 12px;
+      margin-left: 6px;
+    }
+    .vocab-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .vocab-list::-webkit-scrollbar { width: 3px; }
+    .vocab-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .vocab-item {
+      background: var(--bg);
+      border-radius: 10px;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      position: relative;
+    }
+    .vocab-item .v-en { font-weight: 700; font-size: 14px; color: var(--primary); padding-right: 20px; }
+    .vocab-item .v-zh { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+    .vocab-item .v-time { font-size: 11px; color: #ccc; position: absolute; top: 8px; right: 10px; }
+    .vocab-del { position: absolute; bottom: 7px; right: 10px; font-size: 11px; color: #ddd; cursor: pointer; }
+    .vocab-del:hover { color: var(--accent); }
+    .empty-vocab {
+      text-align: center; color: var(--muted); font-size: 13px;
+      padding: 40px 20px; line-height: 1.9;
+    }
+    .sidebar-footer { padding: 12px; border-top: 1px solid var(--border); }
+    .clear-btn {
+      width: 100%; padding: 9px;
+      border-radius: 10px;
+      border: 1.5px solid var(--border);
+      background: var(--card);
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--muted);
+      transition: all 0.2s;
+    }
+    .clear-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ===== 弹窗 ===== */
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .overlay.open { display: flex; }
+    .modal {
+      background: var(--card);
+      border-radius: 20px;
+      padding: 28px 28px 24px;
+      width: 420px;
+      max-width: 95vw;
+      box-shadow: 0 12px 48px rgba(0,0,0,0.18);
+      animation: popIn 0.22s ease;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    @keyframes popIn {
+      from { transform: scale(0.94); opacity: 0; }
+      to   { transform: scale(1);    opacity: 1; }
+    }
+    .modal h3 { font-size: 17px; margin-bottom: 6px; }
+    .modal .modal-desc { font-size: 13px; color: var(--muted); margin-bottom: 18px; line-height: 1.7; }
+    .modal label { font-size: 13px; font-weight: 600; display: block; margin-bottom: 6px; margin-top: 12px; }
+    .modal input, .modal select {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 9px 13px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      font-family: inherit;
+    }
+    .modal input:focus { border-color: var(--primary); }
+    .modal .hint { font-size: 12px; color: var(--muted); margin-top: 4px; margin-bottom: 4px; }
+    .modal .hint a { color: var(--primary); }
+    .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
+    .btn-primary {
+      flex: 1; padding: 10px;
+      background: var(--primary); border: none;
+      border-radius: 10px; color: #fff;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .btn-primary:hover { background: #5753d6; }
+    .btn-cancel {
+      padding: 10px 20px;
+      background: var(--bg); border: 1.5px solid var(--border);
+      border-radius: 10px; font-size: 14px;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn-cancel:hover { border-color: var(--muted); }
+
+    /* ===== Toast ===== */
+    .toast {
+      position: fixed; bottom: 30px; left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #2D2D3A; color: #fff;
+      padding: 10px 22px; border-radius: 24px;
+      font-size: 13.5px; opacity: 0;
+      transition: all 0.3s; z-index: 999; pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* 打字动画 */
+    .typing-dot { display: inline-flex; gap: 4px; align-items: center; padding: 2px 0; }
+    .typing-dot span {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--muted);
+      animation: blink 1.2s infinite;
+    }
+    .typing-dot span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink {
+      0%,100% { opacity: 0.3; transform: scale(0.8); }
+      50%      { opacity: 1;   transform: scale(1); }
+    }
+
+    @media (max-width: 640px) {
+      .sidebar { display: none; }
+      .bubble { max-width: 86%; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 顶栏 -->
+<header>
+    <div class="header-left">
+      <div class="header-logo">🐣</div>
+      <div class="header-text">
+        <div class="header-title">宝宝英语陪练助手</div>
+        <div class="header-sub">专为14月龄宝宝英语启蒙设计</div>
+      </div>
+    </div>
+  <div class="header-actions">
+    <button class="btn-icon" onclick="openSettings()">⚙️ 设置</button>
+    <button class="btn-icon" onclick="sendNowReview()">📤 立即推送复习</button>
+  </div>
+</header>
+
+<!-- API Key 提示横幅 -->
+<div class="api-banner" id="apiBanner">
+  ⚠️ 还未配置 AI 接口密钥，助手暂时无法回答。
+  <a onclick="openSettings()">点这里配置 →</a>
+</div>
+
+<!-- 主体 -->
+<div class="main">
+
+  <!-- 聊天区 -->
+  <div class="chat-section">
+    <div class="messages" id="messages">
+      <div class="msg-row">
+        <div class="avatar ai">🐣</div>
+        <div class="bubble ai">
+          你好妈妈！👋 我是你的英语陪练助手，专门帮你给宝宝做英语启蒙。<br><br>
+          你可以随时问我：<br>
+          · 「宝宝在爬，怎么用英语说？」<br>
+          · 「我想夸宝宝，有哪些鼓励的句子？」<br>
+          · 「宝宝喝奶/吃辅食这个场景怎么用英语陪读？」<br><br>
+          我会自动把我们聊到的英语单词和句子记录到右侧复习清单，每晚 8 点帮你推送到微信 📱<br><br>
+          <strong>先在右上角「⚙️ 设置」里填一下 API Key 和 Server酱 SendKey，就可以开始啦～</strong>
+        </div>
+      </div>
+    </div>
+    <div class="input-bar">
+      <textarea id="inputBox" placeholder="描述一个场景，问我怎么用英语说……（Enter 发送，Shift+Enter 换行）"
+        rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <button class="send-btn" onclick="sendMessage()">
+        <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- 复习清单侧边栏 -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <span>📚 今日复习清单<span class="vocab-count" id="vocabCount">0</span></span>
+      <span class="date-label" id="dateLabel"></span>
+    </div>
+    <div class="vocab-list" id="vocabList">
+      <div class="empty-vocab">✨ 还没有收录内容<br>跟助手聊聊，英语单词和句子<br>会自动出现在这里～</div>
+    </div>
+    <div class="sidebar-footer">
+      <button class="clear-btn" onclick="clearVocab()">🗑️ 清空今日清单</button>
+    </div>
+  </div>
+</div>
+
+<!-- 设置弹窗 -->
+<div class="overlay" id="settingsOverlay" onclick="overlayClick(event)">
+  <div class="modal">
+    <h3>⚙️ 助手设置</h3>
+    <p class="modal-desc">所有信息仅保存在你的浏览器本地，不会上传任何服务器，请放心填写。</p>
+
+    <label>🤖 OpenAI API Key（或兼容接口的 Key）</label>
+    <input type="password" id="apiKeyInput" placeholder="sk-..." />
+
+    <label>🌐 API 接口地址（留空使用 OpenAI 默认）</label>
+    <input type="text" id="apiBaseInput" placeholder="https://api.openai.com/v1" />
+    <p class="hint">如果你用的是国内中转接口（如 deepseek、kimi 等），在这里填对应地址。</p>
+
+    <label>🧠 模型名称</label>
+    <input type="text" id="modelInput" placeholder="gpt-4o-mini" />
+
+    <label>📱 Server酱 SendKey（用于每晚微信推送）</label>
+    <input type="text" id="ftqqKeyInput" placeholder="SCT..." />
+    <p class="hint">还没有？<a href="https://sct.ftqq.com/" target="_blank">点这里免费申请</a>，用微信扫码登录即可获得。</p>
+
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeSettings()">取消</button>
+      <button class="btn-primary" onclick="saveSettings()">保存设置</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ==================== 系统提示词 ====================
+const SYSTEM_PROMPT = `你是一位专业的婴幼儿英语启蒙陪练助手，专门帮助一位正在给14月龄宝宝进行英语启蒙的妈妈。
+
+你的角色：
+- 妈妈的英语助手，随时解答「这个场景用英语怎么说」
+- 提供适合0-2岁宝宝的简短、韵律感强的英语表达
+- 风格温暖、实用，像朋友聊天一样自然
+
+回答规范：
+1. 给出1-3个最实用的核心英语句子或词组
+2. 提供中文含义和简单读音提示（用中文拼音或近似发音描述）
+3. 给出使用场景小技巧（配合什么动作、语气）
+4. 在回答末尾用固定格式输出词汇，供系统自动收录到复习清单
+
+【重要】回答末尾必须包含以下格式（即使只有一个词也要输出）：
+===VOCAB_START===
+[
+  {"en": "英文内容", "zh": "中文含义"},
+  {"en": "另一个英文内容", "zh": "另一个中文含义"}
+]
+===VOCAB_END===
+
+注意：
+- 以中文回答为主，英文用来示范
+- 句子要短、有节奏感，适合宝宝听
+- 不要学术化，要像幼儿园老师一样亲切`;
+
+// ==================== 全局状态 ====================
+let settings = {};
+let vocabToday = [];
+const conversationHistory = [];
+
+function todayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// ==================== 初始化 ====================
+function init() {
+  loadSettings();
+  loadVocab();
+  updateDateLabel();
+  checkApiKey();
+  scheduleDailyPush();
+}
+
+function updateDateLabel() {
+  const now = new Date();
+  document.getElementById('dateLabel').textContent =
+    `${now.getMonth()+1}月${now.getDate()}日`;
+}
+
+function checkApiKey() {
+  document.getElementById('apiBanner').style.display =
+    settings.apiKey ? 'none' : 'flex';
+}
+
+// ==================== 设置 ====================
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem('engBuddySettings');
+    settings = raw ? JSON.parse(raw) : {};
+  } catch(e) { settings = {}; }
+  document.getElementById('apiKeyInput').value  = settings.apiKey  || '';
+  document.getElementById('apiBaseInput').value = settings.apiBase || '';
+  document.getElementById('modelInput').value   = settings.model   || '';
+  document.getElementById('ftqqKeyInput').value = settings.ftqqKey || '';
+}
+
+function saveSettings() {
+  settings.apiKey  = document.getElementById('apiKeyInput').value.trim();
+  settings.apiBase = document.getElementById('apiBaseInput').value.trim();
+  settings.model   = document.getElementById('modelInput').value.trim() || 'gpt-4o-mini';
+  settings.ftqqKey = document.getElementById('ftqqKeyInput').value.trim();
+  localStorage.setItem('engBuddySettings', JSON.stringify(settings));
+  closeSettings();
+  checkApiKey();
+  showToast('✅ 设置已保存');
+}
+
+function openSettings() {
+  loadSettings();
+  document.getElementById('settingsOverlay').classList.add('open');
+}
+function closeSettings() {
+  document.getElementById('settingsOverlay').classList.remove('open');
+}
+function overlayClick(e) {
+  if (e.target === document.getElementById('settingsOverlay')) closeSettings();
+}
+
+// ==================== 词汇管理 ====================
+function loadVocab() {
+  try {
+    const raw = localStorage.getItem('engVocab_' + todayKey());
+    vocabToday = raw ? JSON.parse(raw) : [];
+  } catch(e) { vocabToday = []; }
+  renderVocab();
+}
+
+function saveVocab() {
+  localStorage.setItem('engVocab_' + todayKey(), JSON.stringify(vocabToday));
+}
+
+function addVocabItems(items) {
+  if (!items || !items.length) return;
+  let added = 0;
+  items.forEach(item => {
+    if (!item.en) return;
+    const exists = vocabToday.some(v => v.en.toLowerCase() === item.en.toLowerCase());
+    if (!exists) {
+      vocabToday.push({
+        en: item.en,
+        zh: item.zh || '',
+        time: new Date().toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'})
+      });
+      added++;
+    }
+  });
+  if (added > 0) { saveVocab(); renderVocab(); }
+}
+
+function renderVocab() {
+  const list  = document.getElementById('vocabList');
+  const count = document.getElementById('vocabCount');
+  count.textContent = vocabToday.length;
+
+  if (!vocabToday.length) {
+    list.innerHTML = '<div class="empty-vocab">✨ 还没有收录内容<br>跟助手聊聊，英语单词和句子<br>会自动出现在这里～</div>';
+    return;
+  }
+  list.innerHTML = vocabToday.map((v, i) => `
+    <div class="vocab-item">
+      <div class="v-en">${esc(v.en)}</div>
+      <div class="v-zh">${esc(v.zh)}</div>
+      <div class="v-time">${v.time || ''}</div>
+      <div class="vocab-del" onclick="removeVocab(${i})">✕</div>
+    </div>
+  `).join('');
+}
+
+function removeVocab(idx) {
+  vocabToday.splice(idx, 1);
+  saveVocab();
+  renderVocab();
+}
+
+function clearVocab() {
+  if (!confirm('确定清空今日复习清单吗？')) return;
+  vocabToday = [];
+  saveVocab();
+  renderVocab();
+  showToast('已清空今日清单');
+}
+
+// ==================== 聊天 ====================
+async function sendMessage() {
+  const input = document.getElementById('inputBox');
+  const text  = input.value.trim();
+  if (!text) return;
+
+  if (!settings.apiKey) {
+    showToast('⚠️ 请先在「⚙️ 设置」中填写 API Key');
+    openSettings();
+    return;
+  }
+
+  input.value = '';
+  input.style.height = 'auto';
+
+  appendMessage('user', text);
+  conversationHistory.push({ role: 'user', content: text });
+
+  const thinkingId = appendThinking();
+  try {
+    const reply = await callAI(conversationHistory);
+    removeThinking(thinkingId);
+    const { text: cleanText, vocab } = parseReply(reply);
+    appendMessage('ai', cleanText, vocab);
+    conversationHistory.push({ role: 'assistant', content: reply });
+    if (vocab && vocab.length) addVocabItems(vocab);
+  } catch(err) {
+    removeThinking(thinkingId);
+    appendMessage('ai', `😓 请求出错了：${err.message}\n\n请检查设置中的 API Key 和接口地址是否正确。`);
+  }
+}
+
+async function callAI(history) {
+  const base  = (settings.apiBase || 'https://api.openai.com/v1').replace(/\/$/, '');
+  const model = settings.model || 'gpt-4o-mini';
+
+  const res = await fetch(`${base}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${settings.apiKey}`
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        ...history
+      ],
+      temperature: 0.7,
+      max_tokens: 1200
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content || '';
+}
+
+function parseReply(raw) {
+  let text  = raw;
+  let vocab = [];
+  const m = raw.match(/===VOCAB_START===([\s\S]*?)===VOCAB_END===/);
+  if (m) {
+    try { vocab = JSON.parse(m[1].trim()); } catch(e) {}
+    text = raw.replace(/===VOCAB_START===[\s\S]*?===VOCAB_END===/g, '').trim();
+  }
+  return { text, vocab };
+}
+
+function appendMessage(role, text, vocab) {
+  const msgs = document.getElementById('messages');
+  const row  = document.createElement('div');
+  row.className = `msg-row ${role}`;
+
+  const avatar = document.createElement('div');
+  avatar.className = `avatar ${role}`;
+  avatar.textContent = role === 'ai' ? '🐣' : '👩';
+
+  const bubble = document.createElement('div');
+  bubble.className = `bubble ${role}`;
+  bubble.innerHTML  = esc(text).replace(/\n/g, '<br>');
+
+  if (vocab && vocab.length) {
+    vocab.forEach(v => {
+      const card = document.createElement('div');
+      card.className = 'phrase-card';
+      card.innerHTML = `<div class="en">📌 ${esc(v.en)}</div><div class="zh">${esc(v.zh)}</div>`;
+      bubble.appendChild(card);
+    });
+  }
+
+  row.appendChild(avatar);
+  row.appendChild(bubble);
+  msgs.appendChild(row);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+let _tid = 0;
+function appendThinking() {
+  const id   = 'thinking_' + (++_tid);
+  const msgs = document.getElementById('messages');
+  const row  = document.createElement('div');
+  row.className = 'msg-row';
+  row.id = id;
+  row.innerHTML = `
+    <div class="avatar ai">🐣</div>
+    <div class="bubble ai">
+      <div class="typing-dot"><span></span><span></span><span></span></div>
+    </div>`;
+  msgs.appendChild(row);
+  msgs.scrollTop = msgs.scrollHeight;
+  return id;
+}
+function removeThinking(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+// ==================== 微信推送 ====================
+async function sendNowReview() {
+  if (!settings.ftqqKey) {
+    showToast('⚠️ 请先在「⚙️ 设置」中填写 Server酱 SendKey');
+    openSettings();
+    return;
+  }
+  await doPush();
+}
+
+async function doPush() {
+  if (!settings.ftqqKey) return;
+  if (!vocabToday.length) {
+    showToast('今天还没有学到内容，暂不推送～');
+    return;
+  }
+
+  const date  = new Date().toLocaleDateString('zh-CN');
+  const title = `🐣 宝宝英语复习 · ${date}`;
+
+  let desp = `## 今日英语复习清单\n\n`;
+  desp += `> 今天共收录 **${vocabToday.length}** 个表达，加油复习！💪\n\n`;
+  desp += `| 英文 | 中文 |\n|------|------|\n`;
+  vocabToday.forEach(v => {
+    desp += `| **${v.en}** | ${v.zh} |\n`;
+  });
+  desp += `\n---\n*每天坚持输入，宝宝的英语耳朵会越来越灵！👶*`;
+
+  try {
+    const url = `https://sctapi.ftqq.com/${settings.ftqqKey}.send`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ title, desp })
+    });
+    const data = await res.json();
+    if (data.code === 0) {
+      showToast('✅ 已成功推送到你的微信！');
+    } else {
+      showToast(`推送失败：${data.message || '请检查 SendKey'}`);
+    }
+  } catch(e) {
+    showToast('推送失败，请检查网络或 SendKey 是否正确');
+  }
+}
+
+// 每分钟检查一次，20:00 自动推送
+function scheduleDailyPush() {
+  setInterval(() => {
+    const now = new Date();
+    if (now.getHours() === 20 && now.getMinutes() === 0) {
+      const key = 'lastPushDate';
+      const today = todayKey();
+      if (localStorage.getItem(key) !== today) {
+        localStorage.setItem(key, today);
+        doPush();
+      }
+    }
+  }, 60000);
+}
+
+// ==================== 工具函数 ====================
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function esc(str) {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function showToast(msg, ms = 2800) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), ms);
+}
+
+// ==================== 启动 ====================
+init();
+</script>
+</body>
+</html>
